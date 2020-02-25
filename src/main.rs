@@ -39,6 +39,16 @@ fn get_process_handler(pid: DWORD) -> Option<HandleWrapper> {
         Some(HandleWrapper{handle: process_handler})
     }
 }
+/*
+fn parse_command_ilne(s: &str) -> Vec<String>
+{
+    let mut res = Vec::new();
+    let mut cur_str = String::new();
+    for c in s.chars()
+    {
+        if
+    }
+}*/
 
 fn get_cmd_line(pid: DWORD) -> (Vec<String>, Vec<u16>) {
     use ntapi::ntpebteb::{PEB, PPEB};
@@ -76,10 +86,9 @@ fn get_cmd_line(pid: DWORD) -> (Vec<String>, Vec<u16>) {
             ppeb as *mut _,
             peb_copy.as_mut_ptr() as *mut _,
             size_of::<PEB>() as SIZE_T,
-            ::std::ptr::null_mut(),
+            null_mut(),
         ) != TRUE
         {
-            CloseHandle(handle);
             return (res, vec![]);
         }
         let peb_copy = peb_copy.assume_init();
@@ -92,7 +101,7 @@ fn get_cmd_line(pid: DWORD) -> (Vec<String>, Vec<u16>) {
             proc_param as *mut PRTL_USER_PROCESS_PARAMETERS as *mut _,
             rtl_proc_param_copy.as_mut_ptr() as *mut _,
             size_of::<RTL_USER_PROCESS_PARAMETERS>() as SIZE_T,
-            ::std::ptr::null_mut(),
+            null_mut(),
         ) != TRUE
         {
             return (res, vec![]);
@@ -113,20 +122,19 @@ fn get_cmd_line(pid: DWORD) -> (Vec<String>, Vec<u16>) {
             rtl_proc_param_copy.CommandLine.Buffer as *mut _,
             buffer_copy.as_mut_ptr() as *mut _,
             len * 2  as SIZE_T,
-            ::std::ptr::null_mut(),
+            null_mut(),
         ) != TRUE
         {
             return (res, vec![]);
         }
 
-        let cmdline = String::from_utf16_lossy(&buffer_copy);
-        res.push(cmdline);   
+        let cmdline_full = String::from_utf16_lossy(&buffer_copy);
 
-        (res, buffer_copy)
+        (vec![cmdline_full], buffer_copy)
     }
 }
 
 fn main()
 {
-    
+    println!("{:?}", get_cmd_line(10368));
 }
