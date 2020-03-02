@@ -52,11 +52,9 @@ fn get_cmd_line(pid: DWORD) -> Vec<String> {
     use winapi::um::memoryapi::ReadProcessMemory;
 
     unsafe {
-        let mut res = Vec::new();
-
         let handle = match get_process_handler(pid) {
             Some(h) => h,
-            None => return res,
+            None => return Vec::new(),
         };
 
         let handle = handle.handle;
@@ -70,7 +68,7 @@ fn get_cmd_line(pid: DWORD) -> Vec<String> {
             null_mut(),
         ) != 0
         {
-            return res;
+            return Vec::new();
         }
         let pinfo = pinfo.assume_init();
 
@@ -84,7 +82,7 @@ fn get_cmd_line(pid: DWORD) -> Vec<String> {
             null_mut(),
         ) != TRUE
         {
-            return res;
+            return Vec::new();
         }
         let peb_copy = peb_copy.assume_init();
 
@@ -99,7 +97,7 @@ fn get_cmd_line(pid: DWORD) -> Vec<String> {
             null_mut(),
         ) != TRUE
         {
-            return res;
+            return Vec::new();
         }
         let rtl_proc_param_copy = rtl_proc_param_copy.assume_init();
 
@@ -107,7 +105,7 @@ fn get_cmd_line(pid: DWORD) -> Vec<String> {
         if len % 2 == 1
         {
             // Just in case, I don't know can it happen or not
-            return res;
+            return Vec::new();
         }
         let len = len / 2;
         let mut buffer_copy: Vec<u16> = Vec::with_capacity(len);
@@ -120,7 +118,7 @@ fn get_cmd_line(pid: DWORD) -> Vec<String> {
             null_mut(),
         ) != TRUE
         {
-            return res;
+            return Vec::new();
         }
 
         let cmdline_full = String::from_utf16_lossy(&buffer_copy);
@@ -133,27 +131,30 @@ fn get_cmd_line(pid: DWORD) -> Vec<String> {
 mod test
 {
 
-fn check(args: &Vec<String>)
+
+fn check(args: &[&str])
 {
     let mut command = std::process::Command::new("print_args");
+    let mut expected = vec!["print_args"];
     
     let mut c = &mut command;
     for s in args
     {
         c = c.arg(s);
+        expected.push(s.to_owned());
     }
     
     let mut command = command.spawn().unwrap();
     let cmdline = ::get_cmd_line(command.id());
 
-    assert_eq!(cmdline, ["\"print_args\" asdfasdf"]);
+    assert_eq!(cmdline, expected);
     command.wait().unwrap();
 }
 
 #[test]
 fn test1()
 {
-    
+    check(&["qwerty"]);
 }
 
 }
