@@ -39,18 +39,13 @@ fn get_process_handler(pid: DWORD) -> Option<HandleWrapper> {
         Some(HandleWrapper{handle: process_handler})
     }
 }
-/*
-fn parse_command_ilne(s: &str) -> Vec<String>
-{
-    let mut res = Vec::new();
-    let mut cur_str = String::new();
-    for c in s.chars()
-    {
-        if
-    }
-}*/
 
-fn get_cmd_line(pid: DWORD) -> (Vec<String>, Vec<u16>) {
+fn parse_command_line(s: &str) -> Vec<String>
+{
+    vec![s.to_string()]
+}
+
+fn get_cmd_line(pid: DWORD) -> Vec<String> {
     use ntapi::ntpebteb::{PEB, PPEB};
     use ntapi::ntrtl::{PRTL_USER_PROCESS_PARAMETERS, RTL_USER_PROCESS_PARAMETERS};
     use winapi::shared::basetsd::SIZE_T;
@@ -61,7 +56,7 @@ fn get_cmd_line(pid: DWORD) -> (Vec<String>, Vec<u16>) {
 
         let handle = match get_process_handler(pid) {
             Some(h) => h,
-            None => return (res, vec![]),
+            None => return res,
         };
 
         let handle = handle.handle;
@@ -75,7 +70,7 @@ fn get_cmd_line(pid: DWORD) -> (Vec<String>, Vec<u16>) {
             null_mut(),
         ) != 0
         {
-            return (res, vec![]);
+            return res;
         }
         let pinfo = pinfo.assume_init();
 
@@ -89,7 +84,7 @@ fn get_cmd_line(pid: DWORD) -> (Vec<String>, Vec<u16>) {
             null_mut(),
         ) != TRUE
         {
-            return (res, vec![]);
+            return res;
         }
         let peb_copy = peb_copy.assume_init();
 
@@ -104,7 +99,7 @@ fn get_cmd_line(pid: DWORD) -> (Vec<String>, Vec<u16>) {
             null_mut(),
         ) != TRUE
         {
-            return (res, vec![]);
+            return res;
         }
         let rtl_proc_param_copy = rtl_proc_param_copy.assume_init();
 
@@ -112,7 +107,7 @@ fn get_cmd_line(pid: DWORD) -> (Vec<String>, Vec<u16>) {
         if len % 2 == 1
         {
             // Just in case, I don't know can it happen or not
-            return (res, vec![]);
+            return res;
         }
         let len = len / 2;
         let mut buffer_copy: Vec<u16> = Vec::with_capacity(len);
@@ -125,13 +120,42 @@ fn get_cmd_line(pid: DWORD) -> (Vec<String>, Vec<u16>) {
             null_mut(),
         ) != TRUE
         {
-            return (res, vec![]);
+            return res;
         }
 
         let cmdline_full = String::from_utf16_lossy(&buffer_copy);
 
-        (vec![cmdline_full], buffer_copy)
+        parse_command_line(&cmdline_full)
     }
+}
+
+#[cfg(test)]
+mod test
+{
+
+fn check(args: &Vec<String>)
+{
+    let mut command = std::process::Command::new("print_args");
+    
+    let mut c = &mut command;
+    for s in args
+    {
+        c = c.arg(s);
+    }
+    
+    let mut command = command.spawn().unwrap();
+    let cmdline = ::get_cmd_line(command.id());
+
+    assert_eq!(cmdline, ["\"print_args\" asdfasdf"]);
+    command.wait().unwrap();
+}
+
+#[test]
+fn test1()
+{
+    
+}
+
 }
 
 fn main()
