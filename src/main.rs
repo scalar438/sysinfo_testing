@@ -1,180 +1,170 @@
-extern crate winapi;
 extern crate ntapi;
+extern crate winapi;
 
-use winapi::um::winnt::HANDLE;
-use winapi::um::handleapi::CloseHandle;
 use winapi::shared::minwindef::{DWORD, FALSE, TRUE};
-use winapi::um::winnt::{PROCESS_QUERY_INFORMATION, PROCESS_VM_READ};
+use winapi::um::handleapi::CloseHandle;
 use winapi::um::processthreadsapi::OpenProcess;
+use winapi::um::winnt::HANDLE;
+use winapi::um::winnt::{PROCESS_QUERY_INFORMATION, PROCESS_VM_READ};
 
-use ntapi::ntpsapi::{
-    NtQueryInformationProcess, PROCESS_BASIC_INFORMATION,
-};
+use ntapi::ntpsapi::{NtQueryInformationProcess, PROCESS_BASIC_INFORMATION};
 
 use std::mem::size_of;
 use std::ptr::null_mut;
 
-struct HandleWrapper
-{
-    handle : HANDLE,
+struct HandleWrapper {
+	handle: HANDLE,
 }
 
-impl Drop for HandleWrapper
-{
-    fn drop(&mut self)
-    {
-        unsafe { CloseHandle(self.handle); }
-    }
+impl Drop for HandleWrapper {
+	fn drop(&mut self) {
+		unsafe {
+			CloseHandle(self.handle);
+		}
+	}
 }
 
 fn get_process_handler(pid: DWORD) -> Option<HandleWrapper> {
-    if pid == 0 {
-        return None;
-    }
-    let options = PROCESS_QUERY_INFORMATION | PROCESS_VM_READ;
-    let process_handler = unsafe { OpenProcess(options, FALSE, pid) };
-    if process_handler.is_null() {
-        None
-    } else {
-        Some(HandleWrapper{handle: process_handler})
-    }
+	if pid == 0 {
+		return None;
+	}
+	let options = PROCESS_QUERY_INFORMATION | PROCESS_VM_READ;
+	let process_handler = unsafe { OpenProcess(options, FALSE, pid) };
+	if process_handler.is_null() {
+		None
+	} else {
+		Some(HandleWrapper {
+			handle: process_handler,
+		})
+	}
 }
 
-fn parse_command_line(s: &str) -> Vec<String>
-{
-    let mut res = Vec::new();
-    let mut cur = String::new();
-    for c in s.chars()
-    {
-        match c
-        {
-            ' ' => if !cur.is_empty()
-                {
-                    res.push(cur.clone());
-                    cur.truncate(0);
-                },
-            _ => cur.push(c),
-        }
-    }
-    res.push(cur);
+fn parse_command_line(s: &str) -> Vec<String> {
+	let mut res = Vec::new();
+	let mut cur = String::new();
+	for c in s.chars() {
+		match c {
+			' ' => {
+				if !cur.is_empty() {
+					res.push(cur.clone());
+					cur.truncate(0);
+				}
+			}
+			_ => cur.push(c),
+		}
+	}
+	res.push(cur);
 
-    res
+	res
 }
 
 fn get_cmd_line(pid: DWORD) -> Vec<String> {
-    use ntapi::ntpebteb::{PEB, PPEB};
-    use ntapi::ntrtl::{PRTL_USER_PROCESS_PARAMETERS, RTL_USER_PROCESS_PARAMETERS};
-    use winapi::shared::basetsd::SIZE_T;
-    use winapi::um::memoryapi::ReadProcessMemory;
+	use ntapi::ntpebteb::{PEB, PPEB};
+	use ntapi::ntrtl::{PRTL_USER_PROCESS_PARAMETERS, RTL_USER_PROCESS_PARAMETERS};
+	use winapi::shared::basetsd::SIZE_T;
+	use winapi::um::memoryapi::ReadProcessMemory;
 
-    unsafe {
-        let handle = match get_process_handler(pid) {
-            Some(h) => h,
-            None => return Vec::new(),
-        };
+	unsafe {
+		let handle = match get_process_handler(pid) {
+			Some(h) => h,
+			None => return Vec::new(),
+		};
 
-        let handle = handle.handle;
+		let handle = handle.handle;
 
-        let mut pinfo = std::mem::MaybeUninit::<PROCESS_BASIC_INFORMATION>::uninit();
-        if NtQueryInformationProcess(
-            handle,
-            0, // ProcessBasicInformation
-            pinfo.as_mut_ptr() as *mut _,
-            size_of::<PROCESS_BASIC_INFORMATION>() as u32,
-            null_mut(),
-        ) != 0
-        {
-            return Vec::new();
-        }
-        let pinfo = pinfo.assume_init();
+		let mut pinfo = std::mem::MaybeUninit::<PROCESS_BASIC_INFORMATION>::uninit();
+		if NtQueryInformationProcess(
+			handle,
+			0, // ProcessBasicInformation
+			pinfo.as_mut_ptr() as *mut _,
+			size_of::<PROCESS_BASIC_INFORMATION>() as u32,
+			null_mut(),
+		) != 0
+		{
+			return Vec::new();
+		}
+		let pinfo = pinfo.assume_init();
 
-        let ppeb: PPEB = pinfo.PebBaseAddress;
-        let mut peb_copy = std::mem::MaybeUninit::<PEB>::uninit();
-        if ReadProcessMemory(
-            handle,
-            ppeb as *mut _,
-            peb_copy.as_mut_ptr() as *mut _,
-            size_of::<PEB>() as SIZE_T,
-            null_mut(),
-        ) != TRUE
-        {
-            return Vec::new();
-        }
-        let peb_copy = peb_copy.assume_init();
+		let ppeb: PPEB = pinfo.PebBaseAddress;
+		let mut peb_copy = std::mem::MaybeUninit::<PEB>::uninit();
+		if ReadProcessMemory(
+			handle,
+			ppeb as *mut _,
+			peb_copy.as_mut_ptr() as *mut _,
+			size_of::<PEB>() as SIZE_T,
+			null_mut(),
+		) != TRUE
+		{
+			return Vec::new();
+		}
+		let peb_copy = peb_copy.assume_init();
 
-        let proc_param = peb_copy.ProcessParameters;
-        let mut rtl_proc_param_copy =
-            std::mem::MaybeUninit::<RTL_USER_PROCESS_PARAMETERS>::uninit();
-        if ReadProcessMemory(
-            handle,
-            proc_param as *mut PRTL_USER_PROCESS_PARAMETERS as *mut _,
-            rtl_proc_param_copy.as_mut_ptr() as *mut _,
-            size_of::<RTL_USER_PROCESS_PARAMETERS>() as SIZE_T,
-            null_mut(),
-        ) != TRUE
-        {
-            return Vec::new();
-        }
-        let rtl_proc_param_copy = rtl_proc_param_copy.assume_init();
+		let proc_param = peb_copy.ProcessParameters;
+		let mut rtl_proc_param_copy =
+			std::mem::MaybeUninit::<RTL_USER_PROCESS_PARAMETERS>::uninit();
+		if ReadProcessMemory(
+			handle,
+			proc_param as *mut PRTL_USER_PROCESS_PARAMETERS as *mut _,
+			rtl_proc_param_copy.as_mut_ptr() as *mut _,
+			size_of::<RTL_USER_PROCESS_PARAMETERS>() as SIZE_T,
+			null_mut(),
+		) != TRUE
+		{
+			return Vec::new();
+		}
+		let rtl_proc_param_copy = rtl_proc_param_copy.assume_init();
 
-        let len = rtl_proc_param_copy.CommandLine.Length as usize;
-        if len % 2 == 1
-        {
-            // Just in case, I don't know can it happen or not
-            return Vec::new();
-        }
-        let len = len / 2;
-        let mut buffer_copy: Vec<u16> = Vec::with_capacity(len);
-        buffer_copy.set_len(len);
-        if ReadProcessMemory(
-            handle,
-            rtl_proc_param_copy.CommandLine.Buffer as *mut _,
-            buffer_copy.as_mut_ptr() as *mut _,
-            len * 2  as SIZE_T,
-            null_mut(),
-        ) != TRUE
-        {
-            return Vec::new();
-        }
+		let len = rtl_proc_param_copy.CommandLine.Length as usize;
+		if len % 2 == 1 {
+			// Just in case, I don't know can it happen or not
+			return Vec::new();
+		}
+		let len = len / 2;
+		let mut buffer_copy: Vec<u16> = Vec::with_capacity(len);
+		buffer_copy.set_len(len);
+		if ReadProcessMemory(
+			handle,
+			rtl_proc_param_copy.CommandLine.Buffer as *mut _,
+			buffer_copy.as_mut_ptr() as *mut _,
+			len * 2 as SIZE_T,
+			null_mut(),
+		) != TRUE
+		{
+			return Vec::new();
+		}
 
-        let cmdline_full = String::from_utf16_lossy(&buffer_copy);
+		let cmdline_full = String::from_utf16_lossy(&buffer_copy);
 
-        parse_command_line(&cmdline_full)
-    }
+		parse_command_line(&cmdline_full)
+	}
 }
 
 #[cfg(test)]
-mod test
-{
+mod test {
 
-fn check(args: &[&str])
-{
-    let mut command = std::process::Command::new("print_args");
-    let mut expected = vec!["\"print_args\""]; // First arg is always in quotes
-    
-    let mut c = &mut command;
-    for s in args
-    {
-        c = c.arg(s);
-        expected.push(s.to_owned());
-    }
-    
-    let mut command = command.spawn().unwrap();
-    let cmdline = ::get_cmd_line(command.id());
+	fn check(args: &[&str]) {
+		let mut command = std::process::Command::new("print_args");
+		let mut expected = vec!["\"print_args\""]; // First arg is always in quotes
 
-    assert_eq!(cmdline, expected);
-    command.wait().unwrap();
+		let mut c = &mut command;
+		for s in args {
+			c = c.arg(s);
+			expected.push(s.to_owned());
+		}
+
+		let mut command = command.spawn().unwrap();
+		let cmdline = ::get_cmd_line(command.id());
+
+		assert_eq!(cmdline, expected);
+		command.wait().unwrap();
+	}
+
+	#[test]
+	fn test1() {
+		check(&["qwerty"]);
+	}
 }
 
-#[test]
-fn test1()
-{
-    check(&["qwerty"]);
-}
-
-}
-
-fn main()
-{
-    println!("{:?}", get_cmd_line(10368));
+fn main() {
+	println!("{:?}", get_cmd_line(10368));
 }
