@@ -42,7 +42,23 @@ fn get_process_handler(pid: DWORD) -> Option<HandleWrapper> {
 
 fn parse_command_line(s: &str) -> Vec<String>
 {
-    vec![s.to_string()]
+    let mut res = Vec::new();
+    let mut cur = String::new();
+    for c in s.chars()
+    {
+        match c
+        {
+            ' ' => if !cur.is_empty()
+                {
+                    res.push(cur.clone());
+                    cur.truncate(0);
+                },
+            _ => cur.push(c),
+        }
+    }
+    res.push(cur);
+
+    res
 }
 
 fn get_cmd_line(pid: DWORD) -> Vec<String> {
@@ -131,11 +147,10 @@ fn get_cmd_line(pid: DWORD) -> Vec<String> {
 mod test
 {
 
-
 fn check(args: &[&str])
 {
     let mut command = std::process::Command::new("print_args");
-    let mut expected = vec!["print_args"];
+    let mut expected = vec!["\"print_args\""]; // First arg is always in quotes
     
     let mut c = &mut command;
     for s in args
