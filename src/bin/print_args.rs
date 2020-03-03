@@ -4,5 +4,5 @@ fn main()
     {
         println!("{}", s);
     }
-    std::thread::sleep_ms(2000);
+    std::thread::sleep(std::time::Duration::from_millis(2000));
 }
