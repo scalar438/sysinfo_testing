@@ -42,10 +42,34 @@ fn get_process_handler(pid: DWORD) -> Option<HandleWrapper> {
 fn parse_command_line(s: &str) -> Vec<String> {
 	let mut res = Vec::new();
 	let mut cur = String::new();
+	let mut escaped = false;
+	let mut in_arg = false;
 	for c in s.chars() {
 		match c {
+			'\\' => {
+				if escaped {
+					cur.push('\\');
+				}
+				escaped = !escaped;
+			}
+			'"' => {
+				if escaped {
+					cur.push('"');
+					escaped = false;
+				} else {
+					if in_arg {
+						res.push(cur.clone());
+						cur.truncate(0);
+						in_arg = false;
+					} else {
+						in_arg = true;
+					}
+				}
+			}
 			' ' => {
-				if !cur.is_empty() {
+				if in_arg {
+					cur.push(' ');
+				} else if !cur.is_empty() {
 					res.push(cur.clone());
 					cur.truncate(0);
 				}
@@ -53,7 +77,9 @@ fn parse_command_line(s: &str) -> Vec<String> {
 			_ => cur.push(c),
 		}
 	}
-	res.push(cur);
+	if !cur.is_empty() {
+		res.push(cur);
+	}
 
 	res
 }
@@ -134,7 +160,7 @@ fn get_cmd_line(pid: DWORD) -> Vec<String> {
 		}
 
 		let cmdline_full = String::from_utf16_lossy(&buffer_copy);
-
+println!("Cmdline: {}", cmdline_full);
 		parse_command_line(&cmdline_full)
 	}
 }
@@ -142,9 +168,29 @@ fn get_cmd_line(pid: DWORD) -> Vec<String> {
 #[cfg(test)]
 mod test {
 
+	#[test]
+	fn test_parse_cmdilne() {
+		assert_eq!(::parse_command_line("a b"), vec!["a", "b"],);
+		assert_eq!(::parse_command_line(r#"\"a\"     b"#), vec!["\"a\"", "b"]);
+
+		// With spaces
+		assert_eq!(::parse_command_line(r#""a  b"  c"#), vec!["a  b", "c"]);
+
+		// With quotes
+		assert_eq!(::parse_command_line(r#"a\"b  c"#), vec![r#"a"b"#, "c"]);
+
+		// With quotes, spaces and backslashes
+		assert_eq!(
+			::parse_command_line(r#" "a \\ \"b"  "\\ c\""#),
+			vec![r#"a \ "b"#, r#"\ c""#]
+        );
+        //assert_eq!(
+          //  ::parse_command_line(r#"arg_with_\"quotes\" \\   and spaces"#)
+      //  )
+	}
 	fn check(args: &[&str]) {
 		let mut command = std::process::Command::new("print_args");
-		let mut expected = vec!["\"print_args\""]; // First arg is always in quotes
+		let mut expected = vec!["print_args"]; // First arg is always in quotes
 
 		let mut c = &mut command;
 		for s in args {
@@ -155,16 +201,24 @@ mod test {
 		let mut command = command.spawn().unwrap();
 		let cmdline = ::get_cmd_line(command.id());
 
+		// println!("{}", command);
+
 		assert_eq!(cmdline, expected);
 		command.wait().unwrap();
 	}
 
 	#[test]
 	fn test1() {
-		check(&["qwerty"]);
+	//	check(&["qwerty"]);
+	//	check(&["first arg with spaces", "second_arg"]);
+	//	check(&["first_arg_without_spaces", "second arg with spaces"]);
+	//	check(&["arg_with_\"quotes\""]);
+	//	check(&["arg_with_\"quotes\" \\   and spaces"]);
+		check(&["arg_with_\"backslash"]);
 	}
 }
 
 fn main() {
-	println!("{:?}", get_cmd_line(10368));
+	let s = "\"".to_owned();
+	println!("{:?}", s);
 }
