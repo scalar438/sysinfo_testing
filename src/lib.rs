@@ -43,40 +43,36 @@ fn parse_command_line(s: &str) -> Vec<String> {
 	let mut res = Vec::new();
 	let mut cur = String::new();
 	let mut prev_backslash = false;
-	let mut in_arg = false;
+	let mut quoted_arg = false;
 	for c in s.chars() {
 		match c {
 			'\\' => {
-				if !prev_backslash {
-					prev_backslash = true;
-				} else {
+				if prev_backslash {
+					// Push previous bacslash, not current
 					cur.push('\\');
-					if !in_arg {
-						// Backslashes between quotes do not escaped
-						prev_backslash = false;
-					}
 				}
+				prev_backslash = true;
 			}
 			'"' => {
 				if prev_backslash {
 					cur.push('"');
 					prev_backslash = false;
 				} else {
-					if in_arg {
+					if quoted_arg {
 						res.push(cur.clone());
 						cur.truncate(0);
-						in_arg = false;
+						quoted_arg = false;
 					} else {
-						in_arg = true;
+						quoted_arg = true;
 					}
 				}
 			}
 			' ' => {
-				if in_arg {
-					if prev_backslash {
-						cur.push('\\');
-						prev_backslash = false;
-					}
+				if prev_backslash {
+					cur.push('\\');
+					prev_backslash = false;
+				}
+				if quoted_arg {
 					cur.push(' ');
 				} else if !cur.is_empty() {
 					res.push(cur.clone());
@@ -92,6 +88,9 @@ fn parse_command_line(s: &str) -> Vec<String> {
 			}
 		}
 	}
+	if prev_backslash {
+		cur.push('\\');
+	}
 	if !cur.is_empty() {
 		res.push(cur);
 	}
@@ -99,7 +98,7 @@ fn parse_command_line(s: &str) -> Vec<String> {
 	res
 }
 
-fn get_cmd_line(pid: DWORD) -> Vec<String> {
+pub fn get_cmd_line(pid: DWORD) -> Vec<String> {
 	use ntapi::ntpebteb::{PEB, PPEB};
 	use ntapi::ntrtl::{PRTL_USER_PROCESS_PARAMETERS, RTL_USER_PROCESS_PARAMETERS};
 	use winapi::shared::basetsd::SIZE_T;
@@ -188,7 +187,7 @@ mod test {
 	#[test]
 	fn test_parse_cmdilne() {
 		assert_eq!(parse_command_line("a b"), vec!["a", "b"],);
-		assert_eq!(parse_command_line(r#"\"a\"     b"#), vec!["\"a\"", "b"]);
+		assert_eq!(parse_command_line(r#"\"a\"     b"#), vec![r#""a""#, "b"]);
 
 		// With spaces
 		assert_eq!(parse_command_line(r#""a  b"  c"#), vec!["a  b", "c"]);
@@ -199,7 +198,7 @@ mod test {
 		// With quotes, spaces and backslashes
 		assert_eq!(
 			parse_command_line(r#" "a \ \"b" \\  "\\ c\""#),
-			vec![r#"a \ "b"#, "\\", r#"\\ c""#]
+			vec![r#"a \ "b"#, "\\\\", r#"\\ c""#]
 		);
 		assert_eq!(
 			parse_command_line(
@@ -207,9 +206,15 @@ mod test {
 			),
 			vec![
 				"arg1",
-				r#"arg2\with_backslash_without_space"#,
+				r#"arg2\\with_backslash_without_space"#,
 				r#"arg3 with "spaces \ and backslash"#
 			]
+		);
+		assert_eq!(parse_command_line(r#"qwe q\"#), vec!["qwe", "q\\"]);
+		assert_eq!(parse_command_line(r#"qwe \\"\"#), vec!["qwe", "\\\"\\"]);
+		assert_eq!(
+			parse_command_line(r#""print_args" \" ' "\\\" \\\"""#),
+			vec!["print_args", "\"", "\'", "\\\" \\\""]
 		);
 	}
 	fn check(args: &[&str]) {
@@ -237,7 +242,8 @@ mod test {
 		//	check(&["first arg with spaces", "second_arg"]);
 		//	check(&["first_arg_without_spaces", "second arg with spaces"]);
 		//	check(&["arg_with_\"quotes\""]);
-		check(&["arg_with_\"quotes\" \\   and spaces"]);
+		//check(&["arg_with_\"quotes\" \\   and spaces"]);
 		//check(&["arg_with_\"backslash"]);
+		check(&["\"", "'", r#"\" \""#]);
 	}
 }
