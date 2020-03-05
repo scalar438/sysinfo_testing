@@ -42,20 +42,25 @@ fn get_process_handler(pid: DWORD) -> Option<HandleWrapper> {
 fn parse_command_line(s: &str) -> Vec<String> {
 	let mut res = Vec::new();
 	let mut cur = String::new();
-	let mut escaped = false;
+	let mut prev_backslash = false;
 	let mut in_arg = false;
 	for c in s.chars() {
 		match c {
 			'\\' => {
-				if escaped {
+				if !prev_backslash {
+					prev_backslash = true;
+				} else {
 					cur.push('\\');
+					if !in_arg {
+						// Backslashes between quotes do not escaped
+						prev_backslash = false;
+					}
 				}
-				escaped = !escaped;
 			}
 			'"' => {
-				if escaped {
+				if prev_backslash {
 					cur.push('"');
-					escaped = false;
+					prev_backslash = false;
 				} else {
 					if in_arg {
 						res.push(cur.clone());
@@ -68,13 +73,23 @@ fn parse_command_line(s: &str) -> Vec<String> {
 			}
 			' ' => {
 				if in_arg {
+					if prev_backslash {
+						cur.push('\\');
+						prev_backslash = false;
+					}
 					cur.push(' ');
 				} else if !cur.is_empty() {
 					res.push(cur.clone());
 					cur.truncate(0);
 				}
 			}
-			_ => cur.push(c),
+			_ => {
+				if prev_backslash {
+					cur.push('\\');
+					prev_backslash = false;
+				}
+				cur.push(c);
+			}
 		}
 	}
 	if !cur.is_empty() {
@@ -168,25 +183,34 @@ fn get_cmd_line(pid: DWORD) -> Vec<String> {
 #[cfg(test)]
 mod test {
 
+	use super::*;
+
 	#[test]
 	fn test_parse_cmdilne() {
-		assert_eq!(::parse_command_line("a b"), vec!["a", "b"],);
-		assert_eq!(::parse_command_line(r#"\"a\"     b"#), vec!["\"a\"", "b"]);
+		assert_eq!(parse_command_line("a b"), vec!["a", "b"],);
+		assert_eq!(parse_command_line(r#"\"a\"     b"#), vec!["\"a\"", "b"]);
 
 		// With spaces
-		assert_eq!(::parse_command_line(r#""a  b"  c"#), vec!["a  b", "c"]);
+		assert_eq!(parse_command_line(r#""a  b"  c"#), vec!["a  b", "c"]);
 
 		// With quotes
-		assert_eq!(::parse_command_line(r#"a\"b  c"#), vec![r#"a"b"#, "c"]);
+		assert_eq!(parse_command_line(r#"a\"b  c"#), vec![r#"a"b"#, "c"]);
 
 		// With quotes, spaces and backslashes
 		assert_eq!(
-			::parse_command_line(r#" "a \\ \"b"  "\\ c\""#),
-			vec![r#"a \ "b"#, r#"\ c""#]
+			parse_command_line(r#" "a \ \"b" \\  "\\ c\""#),
+			vec![r#"a \ "b"#, "\\", r#"\\ c""#]
 		);
-		//assert_eq!(
-		//  ::parse_command_line(r#"arg_with_\"quotes\" \\   and spaces"#)
-		//  )
+		assert_eq!(
+			parse_command_line(
+				r#"arg1 arg2\\with_backslash_without_space "arg3 with \"spaces \ and backslash" "#
+			),
+			vec![
+				"arg1",
+				r#"arg2\with_backslash_without_space"#,
+				r#"arg3 with "spaces \ and backslash"#
+			]
+		);
 	}
 	fn check(args: &[&str]) {
 		let mut command = std::process::Command::new("print_args");
@@ -199,7 +223,7 @@ mod test {
 		}
 
 		let mut command = command.spawn().unwrap();
-		let cmdline = ::get_cmd_line(command.id());
+		let cmdline = get_cmd_line(command.id());
 
 		// println!("{}", command);
 
@@ -213,7 +237,7 @@ mod test {
 		//	check(&["first arg with spaces", "second_arg"]);
 		//	check(&["first_arg_without_spaces", "second arg with spaces"]);
 		//	check(&["arg_with_\"quotes\""]);
-		//	check(&["arg_with_\"quotes\" \\   and spaces"]);
-		check(&["arg_with_\"backslash"]);
+		check(&["arg_with_\"quotes\" \\   and spaces"]);
+		//check(&["arg_with_\"backslash"]);
 	}
 }
