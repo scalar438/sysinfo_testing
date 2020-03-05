@@ -217,8 +217,3 @@ mod test {
 		check(&["arg_with_\"backslash"]);
 	}
 }
-
-fn main() {
-	let s = "\"".to_owned();
-	println!("{:?}", s);
-}
