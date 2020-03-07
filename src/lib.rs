@@ -41,65 +41,6 @@ fn get_process_handler(pid: DWORD) -> Option<HandleWrapper> {
 	}
 }
 
-fn parse_command_line(s: &str) -> Vec<String> {
-	let mut res = Vec::new();
-	let mut cur = String::new();
-	let mut prev_backslash = false;
-	let mut quoted_arg = false;
-	for c in s.chars() {
-		match c {
-			'\\' => {
-				if prev_backslash {
-					// Push previous bacslash, not current
-					cur.push('\\');
-				}
-				prev_backslash = true;
-			}
-			'"' => {
-				if prev_backslash {
-					cur.push('"');
-					prev_backslash = false;
-				} else {
-					if quoted_arg {
-						res.push(cur.clone());
-						cur.truncate(0);
-						quoted_arg = false;
-					} else {
-						quoted_arg = true;
-					}
-				}
-			}
-			' ' => {
-				if prev_backslash {
-					cur.push('\\');
-					prev_backslash = false;
-				}
-				if quoted_arg {
-					cur.push(' ');
-				} else if !cur.is_empty() {
-					res.push(cur.clone());
-					cur.truncate(0);
-				}
-			}
-			_ => {
-				if prev_backslash {
-					cur.push('\\');
-					prev_backslash = false;
-				}
-				cur.push(c);
-			}
-		}
-	}
-	if prev_backslash {
-		cur.push('\\');
-	}
-	if !cur.is_empty() {
-		res.push(cur);
-	}
-
-	res
-}
-
 pub fn get_cmd_line(pid: DWORD) -> Vec<String> {
 	use ntapi::ntpebteb::{PEB, PPEB};
 	use ntapi::ntrtl::{PRTL_USER_PROCESS_PARAMETERS, RTL_USER_PROCESS_PARAMETERS};
