@@ -4,5 +4,11 @@ version = "0.0.0"
 edition = "2018"
 
 [dependencies]
-winapi = { version = "0.3", features = ["fileapi", "handleapi", "ifdef", "ioapiset", "minwindef", "pdh", "psapi", "synchapi", "sysinfoapi", "winbase", "winerror", "winioctl", "winnt", "oleauto", "wbemcli", "rpcdce", "combaseapi", "objidl", "objbase", "powerbase", "netioapi", "memoryapi"] }
+winapi = { version = "0.3", features = ["fileapi", "handleapi", 
+    "ifdef", "ioapiset", "minwindef", "pdh", "psapi", 
+    "synchapi", "sysinfoapi", "winbase", "winerror", 
+    "winioctl", "winnt", "oleauto", "wbemcli", "rpcdce", 
+    "combaseapi", "objidl", "objbase", 
+    "powerbase", "netioapi", "memoryapi", "shellapi"] }
 ntapi = "0.3"
+libc = "0.2"
