@@ -99,7 +99,8 @@ pub fn get_cmd_line(pid: DWORD) -> Vec<String> {
 		let rtl_proc_param_copy = rtl_proc_param_copy.assume_init();
 
 		let len = rtl_proc_param_copy.CommandLine.Length as usize;
-		let mut buffer_copy: Vec<u8> = Vec::with_capacity(len);
+		// For len symbols + '/0'
+		let mut buffer_copy: Vec<u8> = Vec::with_capacity(len + 2);
 		buffer_copy.set_len(len);
 		if ReadProcessMemory(
 			handle,
@@ -111,6 +112,8 @@ pub fn get_cmd_line(pid: DWORD) -> Vec<String> {
 		{
 			return Vec::new();
 		}
+		buffer_copy.push(0);
+		buffer_copy.push(0);
 
 		let mut argc = MaybeUninit::<i32>::uninit();
 		let argv_p = CommandLineToArgvW(buffer_copy.as_ptr() as *const _, argc.as_mut_ptr());
@@ -193,5 +196,10 @@ mod test {
 	#[test]
 	fn test8() {
 		check(&["\"", "'", r#"\\\" \""#]);
+	}
+
+	#[test]
+	fn test9() {
+		check(&["\"", "'", r#"\\\" \"#]);
 	}
 }
