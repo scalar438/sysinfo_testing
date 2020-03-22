@@ -10,14 +10,12 @@ fn main() -> std::io::Result<()> {
 		let pid;
 		match input.trim().parse::<sysinfo::Pid>() {
 			Ok(r) => pid = r,
-			Err(_) => 
-			{
+			Err(_) => {
 				println!("Sorry, try again.");
 				continue;
 			}
 		}
-		if pid == 0
-		{
+		if pid == 0 {
 			break;
 		}
 
