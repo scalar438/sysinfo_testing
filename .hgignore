@@ -1,2 +1,5 @@
 syntax: glob
-target/
+rust_cmdline_getter/target/
+cpp_cmdline_getter/.vs/
+cpp_cmdline_getter/out/
+cpp_cmdline_getter/CMakeSettings.json
