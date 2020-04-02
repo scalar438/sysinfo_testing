@@ -4,3 +4,7 @@
 ULONG WindowsVersion = WINDOWS_NEW;
 
 PVOID PhHeapHandle = NULL;
+
+PPH_STRING PhSharedEmptyString = NULL;
+
+PPH_OBJECT_TYPE PhStringType = NULL;

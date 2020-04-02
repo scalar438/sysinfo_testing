@@ -379,8 +379,8 @@ typedef ULONG GDI_HANDLE_BUFFER32[GDI_HANDLE_BUFFER_SIZE32];
 // This isn't in NT, but it's useful.
 typedef struct DECLSPEC_ALIGN(MEMORY_ALLOCATION_ALIGNMENT) _QUAD_PTR
 {
-    ULONG_PTR DoNotUseThisField1;
-    ULONG_PTR DoNotUseThisField2;
+	ULONG_PTR DoNotUseThisField1;
+	ULONG_PTR DoNotUseThisField2;
 } QUAD_PTR, *PQUAD_PTR;
 
 /**
@@ -389,44 +389,43 @@ typedef struct DECLSPEC_ALIGN(MEMORY_ALLOCATION_ALIGNMENT) _QUAD_PTR
  */
 typedef struct _PH_OBJECT_HEADER
 {
-    union
-    {
-        struct
-        {
-            USHORT TypeIndex;
-            UCHAR Flags;
-            UCHAR Reserved1;
+	union {
+		struct
+		{
+			USHORT TypeIndex;
+			UCHAR Flags;
+			UCHAR Reserved1;
 #ifdef _WIN64
-            ULONG Reserved2;
+			ULONG Reserved2;
 #endif
-            union
-            {
-                LONG RefCount;
-                struct
-                {
-                    LONG SavedTypeIndex : 16;
-                    LONG SavedFlags : 8;
-                    LONG Reserved : 7;
-                    LONG DeferDelete : 1; // MUST be the high bit, so that RefCount < 0 when deferring delete
-                };
-            };
+			union {
+				LONG RefCount;
+				struct
+				{
+					LONG SavedTypeIndex : 16;
+					LONG SavedFlags : 8;
+					LONG Reserved : 7;
+					LONG DeferDelete : 1; // MUST be the high bit, so that RefCount < 0 when
+					                      // deferring delete
+				};
+			};
 #ifdef _WIN64
-            ULONG Reserved3;
+			ULONG Reserved3;
 #endif
-        };
-        SLIST_ENTRY DeferDeleteListEntry;
-    };
+		};
+		SLIST_ENTRY DeferDeleteListEntry;
+	};
 
 #ifdef DEBUG
-    PVOID StackBackTrace[16];
-    LIST_ENTRY ObjectListEntry;
+	PVOID StackBackTrace[16];
+	LIST_ENTRY ObjectListEntry;
 #endif
 
-    /**
-     * The body of the object. For use by the \ref PhObjectToObjectHeader and
-     * \ref PhObjectHeaderToObject macros.
-     */
-    QUAD_PTR Body;
+	/**
+	 * The body of the object. For use by the \ref PhObjectToObjectHeader and
+	 * \ref PhObjectHeaderToObject macros.
+	 */
+	QUAD_PTR Body;
 } PH_OBJECT_HEADER, *PPH_OBJECT_HEADER;
 
 typedef struct _PEB32
@@ -714,3 +713,43 @@ typedef struct _RTL_USER_PROCESS_PARAMETERS
 	ULONG_PTR DefaultThreadpoolCpuSetMasks;
 	ULONG DefaultThreadpoolCpuSetMaskCount;
 } RTL_USER_PROCESS_PARAMETERS, *PRTL_USER_PROCESS_PARAMETERS;
+
+/**
+ * The delete procedure for an object type, called when an object of the type is being freed.
+ *
+ * \param Object A pointer to the object being freed.
+ * \param Flags Reserved.
+ */
+typedef VOID(NTAPI *PPH_TYPE_DELETE_PROCEDURE)(_In_ PVOID Object, _In_ ULONG Flags);
+
+typedef struct _PH_FREE_LIST
+{
+	SLIST_HEADER ListHead;
+
+	ULONG Count;
+	ULONG MaximumCount;
+	SIZE_T Size;
+} PH_FREE_LIST, *PPH_FREE_LIST;
+
+/** An object type specifies a kind of object and its delete procedure. */
+typedef struct _PH_OBJECT_TYPE
+{
+	/** The flags that were used to create the object type. */
+	USHORT Flags;
+	UCHAR TypeIndex;
+	UCHAR Reserved;
+	/** The total number of objects of this type that are alive. */
+	ULONG NumberOfObjects;
+	/** An optional procedure called when objects of this type are freed. */
+	PPH_TYPE_DELETE_PROCEDURE DeleteProcedure;
+	/** The name of the type. */
+	PWSTR Name;
+	/** A free list to use when allocating for this type. */
+	PH_FREE_LIST FreeList;
+} PH_OBJECT_TYPE, *PPH_OBJECT_TYPE;
+
+typedef struct _PH_FREE_LIST_ENTRY
+{
+	SLIST_ENTRY ListEntry;
+	QUAD_PTR Body;
+} PH_FREE_LIST_ENTRY, *PPH_FREE_LIST_ENTRY;
