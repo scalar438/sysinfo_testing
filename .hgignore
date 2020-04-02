@@ -1,6 +1,15 @@
 syntax: glob
 rust_cmdline_getter/target/
-cpp_cmdline_getter/.vs/
+
+# For output directory
 cpp_cmdline_getter/out/
+
+# For VS project 
+cpp_cmdline_getter/.vs/
 cpp_cmdline_getter/CMakeSettings.json
+
+# For idea project
 cpp_cmdline_getter/.idea/
+
+# For QtCreator project
+cpp_cmdline_getter/CMakeLists.txt.user
