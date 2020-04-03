@@ -5,12 +5,6 @@
 #include <Windows.h>
 #include <winnt.h>
 
-
-NTSYSAPI
-BOOLEAN
-NTAPI
-RtlFreeHeap(_In_ PVOID HeapHandle, _In_opt_ ULONG Flags, _Frees_ptr_opt_ PVOID BaseAddress);
-
 /**
  * Frees a block of memory allocated with PhAllocate().
  *
@@ -61,20 +55,6 @@ NTSTATUS PhGetProcessCommandLine(_In_ HANDLE ProcessHandle, _Out_ PPH_STRING *Co
 NTSTATUS
 PhGetProcessBasicInformation(_In_ HANDLE ProcessHandle,
                              _Out_ PPROCESS_BASIC_INFORMATION BasicInformation);
-
-NTSYSCALLAPI
-NTSTATUS
-NTAPI
-NtReadVirtualMemory(_In_ HANDLE ProcessHandle, _In_opt_ PVOID BaseAddress,
-                    _Out_writes_bytes_(BufferSize) PVOID Buffer, _In_ SIZE_T BufferSize,
-                    _Out_opt_ PSIZE_T NumberOfBytesRead);
-
-NTSYSCALLAPI
-NTSTATUS
-NTAPI
-NtQueryInformationProcess(_In_ HANDLE ProcessHandle, _In_ PROCESSINFOCLASS ProcessInformationClass,
-                          _Out_writes_bytes_(ProcessInformationLength) PVOID ProcessInformation,
-                          _In_ ULONG ProcessInformationLength, _Out_opt_ PULONG ReturnLength);
 
 /**
  * Obtains a reference to a zero-length string.
@@ -171,8 +151,3 @@ PVOID PhAllocateFromFreeList(_Inout_ PPH_FREE_LIST FreeList);
  * is guaranteed to be aligned at MEMORY_ALLOCATION_ALIGNMENT bytes.
  */
 _Check_return_ _Ret_notnull_ _Post_writable_byte_size_(Size) PVOID PhAllocate(_In_ SIZE_T Size);
-
-NTSYSAPI
-PVOID
-NTAPI
-RtlAllocateHeap(_In_ PVOID HeapHandle, _In_opt_ ULONG Flags, _In_ SIZE_T Size);

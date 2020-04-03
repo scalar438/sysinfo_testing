@@ -1,10 +1,13 @@
 #include "ph_funcs.h"
-#include <Windows.h>
+#include "ph_variables.h"
+
 #include <stdio.h>
 #include <winnt.h>
 
 int main()
 {
+	PhInitializeWindowsVersion();
+
 	DWORD pid;
 	scanf("%d", &pid);
 	HANDLE handle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);

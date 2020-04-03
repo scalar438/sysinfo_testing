@@ -5,6 +5,7 @@
 #include "ph_defines.h"
 #include "ph_funcs.h"
 #include "ph_variables.h"
+#include "sys_func.h"
 
 NTSTATUS PhGetProcessCommandLine(_In_ HANDLE ProcessHandle, _Out_ PPH_STRING *CommandLine)
 {

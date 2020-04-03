@@ -96,3 +96,5 @@
  * \return The new size, including space for the object header.
  */
 #define PhAddObjectHeaderSize(Size) ((Size) + UFIELD_OFFSET(PH_OBJECT_HEADER, Body))
+
+#define HEAP_CLASS_1 0x00001000 // Private heap

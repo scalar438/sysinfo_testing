@@ -10,3 +10,5 @@ extern PVOID PhHeapHandle;
 extern PPH_STRING PhSharedEmptyString;
 
 extern PPH_OBJECT_TYPE PhStringType;
+
+VOID PhInitializeWindowsVersion(VOID);
