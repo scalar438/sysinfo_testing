@@ -5,7 +5,6 @@
 
 int main()
 {
-	printf("%d\n", GetCurrentProcessId());
 	DWORD pid;
 	scanf("%d", &pid);
 	HANDLE handle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
