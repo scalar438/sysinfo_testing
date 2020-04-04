@@ -6,7 +6,7 @@
 
 int main()
 {
-	PhInitializeWindowsVersion();
+	ph_init();
 
 	DWORD pid;
 	scanf("%d", &pid);
