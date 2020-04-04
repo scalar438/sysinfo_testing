@@ -151,3 +151,49 @@ PVOID PhAllocateFromFreeList(_Inout_ PPH_FREE_LIST FreeList);
  * is guaranteed to be aligned at MEMORY_ALLOCATION_ALIGNMENT bytes.
  */
 _Check_return_ _Ret_notnull_ _Post_writable_byte_size_(Size) PVOID PhAllocate(_In_ SIZE_T Size);
+
+/**
+ * Creates an object type.
+ *
+ * \param Name The name of the type.
+ * \param Flags A combination of flags affecting the behaviour of the object type.
+ * \param DeleteProcedure A callback function that is executed when an object of this type is about
+ * to be freed (i.e. when its reference count is 0).
+ * \param Parameters A structure containing additional parameters for the object type.
+ *
+ * \return A pointer to the newly created object type.
+ *
+ * \remarks Do not reference or dereference the object type once it is created.
+ */
+PPH_OBJECT_TYPE PhCreateObjectTypeEx(_In_ PWSTR Name, _In_ ULONG Flags,
+                                     _In_opt_ PPH_TYPE_DELETE_PROCEDURE DeleteProcedure,
+                                     _In_opt_ PPH_OBJECT_TYPE_PARAMETERS Parameters);
+
+/**
+ * Creates an object type.
+ *
+ * \param Name The name of the type.
+ * \param Flags A combination of flags affecting the behaviour of the object type.
+ * \param DeleteProcedure A callback function that is executed when an object of this type is about
+ * to be freed (i.e. when its reference count is 0).
+ *
+ * \return A pointer to the newly created object type.
+ *
+ * \remarks Do not reference or dereference the object type once it is created.
+ */
+PPH_OBJECT_TYPE PhCreateObjectType(_In_ PWSTR Name, _In_ ULONG Flags,
+                                   _In_opt_ PPH_TYPE_DELETE_PROCEDURE DeleteProcedure);
+
+/**
+ * Initializes the object manager module.
+ */
+NTSTATUS PhRefInitialization(VOID);
+
+/**
+ * Initializes a free list object.
+ *
+ * \param FreeList A pointer to the free list object.
+ * \param Size The number of bytes in each allocation.
+ * \param MaximumCount The number of unused allocations to store.
+ */
+VOID PhInitializeFreeList(_Out_ PPH_FREE_LIST FreeList, _In_ SIZE_T Size, _In_ ULONG MaximumCount);

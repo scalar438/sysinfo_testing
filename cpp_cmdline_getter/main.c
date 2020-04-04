@@ -8,8 +8,8 @@ int main()
 {
 	ph_init();
 
-	DWORD pid;
-	scanf("%d", &pid);
+	DWORD pid = 6608;
+	// scanf("%d", &pid);
 	HANDLE handle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
 	if (handle == NULL)
 	{

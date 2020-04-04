@@ -1,7 +1,7 @@
 #include "ph_variables.h"
 #include "ph_defines.h"
+#include "ph_funcs.h"
 #include "ph_types.h"
-
 #include "sys_func.h"
 
 ULONG WindowsVersion = WINDOWS_NEW;
@@ -13,6 +13,16 @@ PPH_STRING PhSharedEmptyString = NULL;
 PPH_OBJECT_TYPE PhStringType = NULL;
 
 RTL_OSVERSIONINFOEXW PhOsVersion = {0};
+
+PPH_OBJECT_TYPE PhObjectTypeObject;
+
+SLIST_HEADER PhObjectDeferDeleteListHead;
+
+PPH_OBJECT_TYPE PhAllocType = NULL;
+
+ULONG PhpAutoPoolTlsIndex;
+
+ULONG PhObjectTypeCount = 0;
 
 VOID PhInitializeWindowsVersion(VOID)
 {
@@ -102,15 +112,16 @@ VOID PhInitializeWindowsVersion(VOID)
 
 void initHeapHandle()
 {
-    PhHeapHandle = RtlCreateHeap(HEAP_GROWABLE | HEAP_CLASS_1, NULL,
-                                 2 * 1024 * 1024, // 2 MB
-                                 1024 * 1024,     // 1 MB
-                                 NULL, NULL);
+	PhHeapHandle = RtlCreateHeap(HEAP_GROWABLE | HEAP_CLASS_1, NULL,
+	                             2 * 1024 * 1024, // 2 MB
+	                             1024 * 1024,     // 1 MB
+	                             NULL, NULL);
 }
 
 void ph_init()
 {
-    PhInitializeWindowsVersion();
-    initHeapHandle();
+	PhInitializeWindowsVersion();
+	initHeapHandle();
+	PhRefInitialization();
+	PhStringType = PhCreateObjectType(L"String", 0, NULL);
 }
-
