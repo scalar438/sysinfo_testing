@@ -1,3 +1,4 @@
 project(cmdline_getter)
 
-add_executable(cmdline_getter main.cpp ph_funcs.c not_found.cpp ph_variables.c)
+add_executable(cmdline_getter main.c ph_funcs.c ph_variables.c)
+target_link_libraries(cmdline_getter PRIVATE ntdll.lib)

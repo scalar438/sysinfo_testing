@@ -5,12 +5,6 @@
 #include <Windows.h>
 #include <winnt.h>
 
-
-NTSYSAPI
-BOOLEAN
-NTAPI
-RtlFreeHeap(_In_ PVOID HeapHandle, _In_opt_ ULONG Flags, _Frees_ptr_opt_ PVOID BaseAddress);
-
 /**
  * Frees a block of memory allocated with PhAllocate().
  *
@@ -62,24 +56,6 @@ NTSTATUS
 PhGetProcessBasicInformation(_In_ HANDLE ProcessHandle,
                              _Out_ PPROCESS_BASIC_INFORMATION BasicInformation);
 
-NTSYSCALLAPI
-NTSTATUS
-NTAPI
-NtReadVirtualMemory(_In_ HANDLE ProcessHandle, _In_opt_ PVOID BaseAddress,
-                    _Out_writes_bytes_(BufferSize) PVOID Buffer, _In_ SIZE_T BufferSize,
-                    _Out_opt_ PSIZE_T NumberOfBytesRead);
-
-NTSYSCALLAPI
-NTSTATUS
-NTAPI
-NtQueryInformationProcess(
-    _In_ HANDLE ProcessHandle,
-    _In_ PROCESSINFOCLASS ProcessInformationClass,
-    _Out_writes_bytes_(ProcessInformationLength) PVOID ProcessInformation,
-    _In_ ULONG ProcessInformationLength,
-    _Out_opt_ PULONG ReturnLength
-);
-
 /**
  * Obtains a reference to a zero-length string.
  */
@@ -126,6 +102,98 @@ PVOID PhReferenceObject(_In_ PVOID Object);
  *
  * \param ObjectHeader A pointer to the object header of an allocated object.
  */
-VOID PhpFreeObject(
-    _In_ PPH_OBJECT_HEADER ObjectHeader
-);
+VOID PhpFreeObject(_In_ PPH_OBJECT_HEADER ObjectHeader);
+
+/**
+ * Allocates a object.
+ *
+ * \param ObjectSize The size of the object.
+ * \param ObjectType The type of the object.
+ *
+ * \return A pointer to the newly allocated object.
+ */
+PVOID PhCreateObject(_In_ SIZE_T ObjectSize, _In_ PPH_OBJECT_TYPE ObjectType);
+
+/**
+ * Frees a block of memory to a free list.
+ *
+ * \param FreeList A pointer to a free list object.
+ * \param Memory A pointer to a block of memory.
+ */
+VOID PhFreeToFreeList(_Inout_ PPH_FREE_LIST FreeList, _In_ PVOID Memory);
+
+/**
+ * Allocates storage for an object.
+ *
+ * \param ObjectType The type of the object.
+ * \param ObjectSize The size of the object, excluding the header.
+ */
+PPH_OBJECT_HEADER PhpAllocateObject(_In_ PPH_OBJECT_TYPE ObjectType, _In_ SIZE_T ObjectSize);
+
+/**
+ * Allocates a block of memory from a free list.
+ *
+ * \param FreeList A pointer to a free list object.
+ *
+ * \return A pointer to the allocated block of memory. The memory must be freed using
+ * PhFreeToFreeList(). The block is guaranteed to be aligned at MEMORY_ALLOCATION_ALIGNMENT bytes.
+ */
+PVOID PhAllocateFromFreeList(_Inout_ PPH_FREE_LIST FreeList);
+
+/**
+ * Allocates a block of memory.
+ *
+ * \param Size The number of bytes to allocate.
+ *
+ * \return A pointer to the allocated block of memory.
+ *
+ * \remarks If the function fails to allocate the block of memory, it raises an exception. The block
+ * is guaranteed to be aligned at MEMORY_ALLOCATION_ALIGNMENT bytes.
+ */
+_Check_return_ _Ret_notnull_ _Post_writable_byte_size_(Size) PVOID PhAllocate(_In_ SIZE_T Size);
+
+/**
+ * Creates an object type.
+ *
+ * \param Name The name of the type.
+ * \param Flags A combination of flags affecting the behaviour of the object type.
+ * \param DeleteProcedure A callback function that is executed when an object of this type is about
+ * to be freed (i.e. when its reference count is 0).
+ * \param Parameters A structure containing additional parameters for the object type.
+ *
+ * \return A pointer to the newly created object type.
+ *
+ * \remarks Do not reference or dereference the object type once it is created.
+ */
+PPH_OBJECT_TYPE PhCreateObjectTypeEx(_In_ PWSTR Name, _In_ ULONG Flags,
+                                     _In_opt_ PPH_TYPE_DELETE_PROCEDURE DeleteProcedure,
+                                     _In_opt_ PPH_OBJECT_TYPE_PARAMETERS Parameters);
+
+/**
+ * Creates an object type.
+ *
+ * \param Name The name of the type.
+ * \param Flags A combination of flags affecting the behaviour of the object type.
+ * \param DeleteProcedure A callback function that is executed when an object of this type is about
+ * to be freed (i.e. when its reference count is 0).
+ *
+ * \return A pointer to the newly created object type.
+ *
+ * \remarks Do not reference or dereference the object type once it is created.
+ */
+PPH_OBJECT_TYPE PhCreateObjectType(_In_ PWSTR Name, _In_ ULONG Flags,
+                                   _In_opt_ PPH_TYPE_DELETE_PROCEDURE DeleteProcedure);
+
+/**
+ * Initializes the object manager module.
+ */
+NTSTATUS PhRefInitialization(VOID);
+
+/**
+ * Initializes a free list object.
+ *
+ * \param FreeList A pointer to the free list object.
+ * \param Size The number of bytes in each allocation.
+ * \param MaximumCount The number of unused allocations to store.
+ */
+VOID PhInitializeFreeList(_Out_ PPH_FREE_LIST FreeList, _In_ SIZE_T Size, _In_ ULONG MaximumCount);

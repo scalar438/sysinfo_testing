@@ -29,7 +29,7 @@
 //
 // An invalid parameter was passed to a service or function as the second argument.
 //
-#define STATUS_INVALID_PARAMETER_2       ((NTSTATUS)0xC00000F0L)
+#define STATUS_INVALID_PARAMETER_2 ((NTSTATUS)0xC00000F0L)
 
 #define GDI_HANDLE_BUFFER_SIZE32 34
 #define GDI_HANDLE_BUFFER_SIZE64 60
@@ -49,7 +49,8 @@
  *
  * \return A pointer to the object header of the object.
  */
-#define PhObjectToObjectHeader(Object) ((PPH_OBJECT_HEADER)CONTAINING_RECORD((PCHAR)(Object), PH_OBJECT_HEADER, Body))
+#define PhObjectToObjectHeader(Object) \
+	((PPH_OBJECT_HEADER)CONTAINING_RECORD((PCHAR)(Object), PH_OBJECT_HEADER, Body))
 
 #ifdef DEBUG
 #define ASSUME_ASSERT(Expression) assert(Expression)
@@ -58,3 +59,44 @@
 #define ASSUME_ASSERT(Expression) __assume(Expression)
 #define ASSUME_NO_DEFAULT __assume(FALSE)
 #endif
+
+#define PH_OBJECT_TYPE_TABLE_SIZE 256
+
+/** The object was allocated from the small free list. */
+#define PH_OBJECT_FROM_SMALL_FREE_LIST 0x1
+/** The object was allocated from the type free list. */
+#define PH_OBJECT_FROM_TYPE_FREE_LIST 0x2
+
+// Object type flags
+#define PH_OBJECT_TYPE_USE_FREE_LIST 0x00000001
+
+// Configuration
+
+#define PH_OBJECT_SMALL_OBJECT_SIZE 48
+#define PH_OBJECT_SMALL_OBJECT_COUNT 512
+
+// Object type flags
+#define PH_OBJECT_TYPE_USE_FREE_LIST 0x00000001
+#define PH_OBJECT_TYPE_VALID_FLAGS 0x00000001
+
+/**
+ * Gets a pointer to an object from an object header.
+ *
+ * \param ObjectHeader A pointer to an object header.
+ *
+ * \return A pointer to an object.
+ */
+#define PhObjectHeaderToObject(ObjectHeader) ((PVOID) & ((PPH_OBJECT_HEADER)(ObjectHeader))->Body)
+
+/**
+ * Calculates the total size to allocate for an object.
+ *
+ * \param Size The size of the object to allocate.
+ *
+ * \return The new size, including space for the object header.
+ */
+#define PhAddObjectHeaderSize(Size) ((Size) + UFIELD_OFFSET(PH_OBJECT_HEADER, Body))
+
+#define HEAP_CLASS_1 0x00001000 // Private heap
+
+#define PhRaiseStatus(Status) RtlRaiseStatus(Status)
