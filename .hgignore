@@ -3,8 +3,9 @@ rust_cmdline_getter/target/
 
 # For output directory
 cpp_cmdline_getter/out/
+run_scripts/build/
 
-# For VS project 
+# For VS project
 cpp_cmdline_getter/.vs/
 cpp_cmdline_getter/CMakeSettings.json
 
@@ -13,3 +14,4 @@ cpp_cmdline_getter/.idea/
 
 # For QtCreator project
 cpp_cmdline_getter/CMakeLists.txt.user
+
