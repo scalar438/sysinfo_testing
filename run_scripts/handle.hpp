@@ -1,6 +1,7 @@
 #pragma once
 #include <Windows.h>
 
+// Handle RAII wrapper
 struct Handle
 {
 	Handle() { m_handle = NULL; }
@@ -16,8 +17,7 @@ struct Handle
 
 	Handle &Handle::operator=(Handle &&old) noexcept
 	{
-		m_handle     = old.m_handle;
-		old.m_handle = NULL;
+		std::swap(m_handle, old.m_handle);
 		return *this;
 	}
 
