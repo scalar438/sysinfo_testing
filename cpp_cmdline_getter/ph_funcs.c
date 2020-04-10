@@ -11,7 +11,6 @@
 
 NTSTATUS PhGetProcessCommandLine(_In_ HANDLE ProcessHandle, _Out_ PPH_STRING *CommandLine)
 {
-	printf("%d\n", WindowsVersion);
 	if (WindowsVersion >= WINDOWS_8_1)
 	{
 		NTSTATUS status;
@@ -22,7 +21,6 @@ NTSTATUS PhGetProcessCommandLine(_In_ HANDLE ProcessHandle, _Out_ PPH_STRING *Co
 
 		if (NT_SUCCESS(status))
 		{
-			printf("Success\n");
 			*CommandLine = PhCreateStringFromUnicodeString(commandLine);
 			PhFree(commandLine);
 
@@ -300,9 +298,7 @@ NTSTATUS PhpQueryProcessVariableSize(_In_ HANDLE ProcessHandle,
 PPH_STRING
 PhCreateStringFromUnicodeString(_In_ PUNICODE_STRING UnicodeString)
 {
-	printf("Before checking\n");
 	if (UnicodeString->Length == 0) return PhReferenceEmptyString();
-	printf("After checking\n");
 	return PhCreateStringEx(UnicodeString->Buffer, UnicodeString->Length);
 }
 
@@ -330,13 +326,9 @@ PhGetProcessBasicInformation(_In_ HANDLE ProcessHandle,
 PPH_STRING PhCreateStringEx(_In_opt_ PWCHAR Buffer, _In_ SIZE_T Length)
 {
 	PPH_STRING string;
-
-	printf("1");
-
 	string = PhCreateObject(UFIELD_OFFSET(PH_STRING, Data) + Length +
 	                            sizeof(UNICODE_NULL), // Null terminator for compatibility
 	                        PhStringType);
-	printf("2");
 	// assert(!(Length & 1));
 	string->Length                                  = Length;
 	string->Buffer                                  = string->Data;
@@ -346,8 +338,6 @@ PPH_STRING PhCreateStringEx(_In_opt_ PWCHAR Buffer, _In_ SIZE_T Length)
 	{
 		memcpy(string->Buffer, Buffer, Length);
 	}
-
-	printf("End of PhCreateStringEx\n");
 
 	return string;
 }

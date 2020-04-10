@@ -19,4 +19,6 @@ int main()
 	PPH_STRING cmdline;
 	PhGetProcessCommandLine(handle, &cmdline);
 	wprintf(cmdline->Buffer);
+
+	Sleep(1000);
 }
