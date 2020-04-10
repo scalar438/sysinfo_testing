@@ -14,6 +14,13 @@ struct Handle
 		if (m_handle != NULL) CloseHandle(m_handle);
 	}
 
+	Handle &Handle::operator=(Handle &&old) noexcept
+	{
+		m_handle     = old.m_handle;
+		old.m_handle = NULL;
+		return *this;
+	}
+
 	Handle(const Handle &) = delete;
 	Handle &operator=(const Handle &) = delete;
 
