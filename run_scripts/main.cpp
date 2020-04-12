@@ -111,15 +111,16 @@ int run_cross(std::string_view p1, std::string_view p2)
 			return 2;
 		}
 
-		if (!write_to_handle(si1.write_stdin, std::to_string(pi1.dwProcessId)) ||
-		    !write_to_handle(si2.write_stdin, std::to_string(pi2.dwProcessId)))
+		if (!write_to_handle(si1.write_stdin, std::to_string(pi2.dwProcessId)) ||
+		    !write_to_handle(si2.write_stdin, std::to_string(pi1.dwProcessId)))
 		{
 			return 2;
 		}
 
 		out1 = std::move(si1.read_stdout);
 		out2 = std::move(si2.read_stdout);
-		// Do not close process && thread handles because there are not too many of them
+
+		Handle for_destruction[] = {pi1.hProcess, pi1.hThread, pi2.hProcess, pi2.hThread};
 	}
 
 	auto str1 = read_to_end(out1);
@@ -127,14 +128,15 @@ int run_cross(std::string_view p1, std::string_view p2)
 
 	if (!(str1 && str2)) return 2;
 
-	return *str1 == cmdline2 && *str2 == cmdline1;
+	if (*str1 == cmdline2 && *str2 == cmdline1) return 0;
+	return 1;
 }
 
 int main(int argc, char *argv[])
 {
 	if (argc == 1)
 	{
-		std::cout << "There no porgrams passed through commandline\n";
+		std::cout << "There no programs passed through the commandline\n";
 		return -42;
 	}
 	for (int i = 1; i < argc; ++i)
@@ -148,11 +150,11 @@ int main(int argc, char *argv[])
 				// All ok, do nothing
 				break;
 
-			case 1: std::cerr << "Program didn't return command line\n"; return -1;
+			case 1: std::cout << "Program didn't return command line\n"; return -1;
 
 			case 2: std::cerr << "Something went wrong\n"; return -2;
 			}
 		}
 	}
-	std::cout << "All programs returned correct command-line\n";
+	std::cout << "All programs returned correct command line\n";
 }
