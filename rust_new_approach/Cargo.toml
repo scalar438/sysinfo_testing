@@ -1,0 +1,9 @@
+[package]
+name = "cmdline_test"
+version = "0.0.0"
+edition = "2018"
+
+[dependencies]
+winapi = {version = "0.3", features = ["ntdef", "processthreadsapi", "shellapi", "winbase"]}
+ntapi = "0.3"
+libc = "0.2"

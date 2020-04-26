@@ -1,5 +1,7 @@
 syntax: glob
+# For rust projects
 rust_cmdline_getter/target/
+rust_new_approach/target/
 
 # For output directory
 cpp_cmdline_getter/out/
