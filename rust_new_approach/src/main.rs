@@ -4,7 +4,7 @@ extern crate winapi;
 use std::mem::MaybeUninit;
 
 use winapi::shared::minwindef::{DWORD, FALSE, ULONG};
-use winapi::shared::ntdef::{HANDLE, NTSTATUS};
+use winapi::shared::ntdef::{HANDLE, NTSTATUS, UNICODE_STRING};
 use winapi::shared::ntstatus::{
 	STATUS_BUFFER_OVERFLOW, STATUS_BUFFER_TOO_SMALL, STATUS_INFO_LENGTH_MISMATCH,
 };
@@ -12,6 +12,11 @@ use winapi::um::processthreadsapi::OpenProcess;
 use winapi::um::winnt::PROCESS_QUERY_INFORMATION;
 
 use ntapi::ntpsapi::{NtQueryInformationProcess, ProcessCommandLineInformation, PROCESSINFOCLASS};
+
+unsafe fn create_unicode_string(p: *const UNICODE_STRING) -> String {
+	let slice = std::slice::from_raw_parts((*p).Buffer, (*p).Length as usize / 2);
+	String::from_utf16_lossy(slice)
+}
 
 unsafe fn PhpQueryProcessVariableSize(
 	ProcessHandle: HANDLE,
@@ -45,22 +50,20 @@ unsafe fn PhpQueryProcessVariableSize(
 		returnLength,
 		&mut returnLength as *mut _,
 	);
-	buffer.push(0);
-	dbg!(buffer);
+	let buffer = (*(buffer.as_ptr() as *const UNICODE_STRING)).Buffer;
+
 	// Get argc and argv from command line
 	let mut argc = MaybeUninit::<i32>::uninit();
-	let argv_p = winapi::um::shellapi::CommandLineToArgvW(buffer.as_ptr(), argc.as_mut_ptr());
+	let argv_p = winapi::um::shellapi::CommandLineToArgvW(buffer as *const _, argc.as_mut_ptr());
 	if argv_p.is_null() {
 		return Ok(Vec::new());
 	}
 	let argc = argc.assume_init();
-	dbg!(argc);
 	let argv = std::slice::from_raw_parts(argv_p, argc as usize);
 
 	let mut res = Vec::new();
 	for arg in argv {
 		let len = libc::wcslen(*arg);
-		dbg!(len);
 		let str_slice = std::slice::from_raw_parts(*arg, len);
 		res.push(String::from_utf16_lossy(str_slice));
 	}
@@ -78,9 +81,15 @@ fn get_cmd_line(h: HANDLE) -> Vec<String> {
 }
 
 fn main() {
-	let pid = 4404;
+	let pid;
+	{
+		let mut input = String::new();
+		std::io::stdin().read_line(&mut input).unwrap();
+		pid = input.trim().parse().unwrap();
+	}
 	let options = PROCESS_QUERY_INFORMATION;
-	let process_handler = unsafe { OpenProcess(options, FALSE, pid as DWORD) };
-	let v = get_cmd_line(process_handler);
-	// println!("{:#?}", v);
+	let process_handler = unsafe { OpenProcess(options, FALSE, pid) };
+	let argv = get_cmd_line(process_handler);
+	print!("{}", argv.join(" "));
+	std::thread::sleep(std::time::Duration::from_secs(1));
 }
